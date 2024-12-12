@@ -1,0 +1,11 @@
+N. Sol: 9216
+Solución 1:
+"1-JMB-True-2-2: STD(3, 3), STD(3, 3), STD(3, 3), STD(3, 3)"
+Solución 2:
+"1-JMB-True-2-2: STD(3, 3), SPC(3, 0), STD(3, 3), STD(3, 3)"
+Solución 3:
+"1-JMB-True-2-2: STD(3, 3), SPC(2, 3), STD(3, 3), STD(3, 3)"
+Solución 4:
+"1-JMB-True-2-2: STD(3, 3), SPC(2, 1), STD(3, 3), STD(3, 3)"
+Solución 5:
+"1-JMB-True-2-2: STD(3, 3), SPC(0, 3), STD(3, 3), STD(3, 3)"
