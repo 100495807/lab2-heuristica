@@ -1,11 +1,81 @@
-N. Sol: 9216
-Solución 1:
-"1-JMB-True-2-2: STD(3, 3), STD(3, 3), STD(3, 3), STD(3, 3)"
-Solución 2:
-"1-JMB-True-2-2: STD(3, 3), SPC(3, 0), STD(3, 3), STD(3, 3)"
-Solución 3:
-"1-JMB-True-2-2: STD(3, 3), SPC(2, 3), STD(3, 3), STD(3, 3)"
-Solución 4:
-"1-JMB-True-2-2: STD(3, 3), SPC(2, 1), STD(3, 3), STD(3, 3)"
-Solución 5:
-"1-JMB-True-2-2: STD(3, 3), SPC(0, 3), STD(3, 3), STD(3, 3)"
+N. Sol: 16
+Solucion 1:
+1-JMB-T-0-2: SPC(1, 1) SPC(1, 1) STD(0, 0) STD(0, 0) 
+2-STD-F-2-0: SPC(1, 1) SPC(1, 1) SPC(1, 1) SPC(1, 1) 
+3-STD-F-0-0: STD(0, 0) STD(0, 0) STD(0, 0) STD(0, 0) 
+4-JMB-F-2-2: STD(0, 0) STD(0, 0) SPC(1, 1) SPC(1, 1) 
+Solucion 2:
+1-JMB-T-0-2: SPC(1, 1) SPC(1, 1) STD(0, 0) STD(0, 0) 
+2-STD-F-2-0: SPC(1, 1) SPC(1, 1) SPC(1, 1) STD(0, 0) 
+3-STD-F-0-0: STD(0, 0) STD(0, 0) STD(0, 0) SPC(1, 1) 
+4-JMB-F-2-2: STD(0, 0) STD(0, 0) SPC(1, 1) SPC(1, 1) 
+Solucion 3:
+1-JMB-T-0-2: SPC(1, 1) SPC(1, 1) STD(0, 0) STD(0, 0) 
+2-STD-F-2-0: SPC(1, 1) SPC(1, 1) STD(0, 0) SPC(1, 1) 
+3-STD-F-0-0: STD(0, 0) STD(0, 0) SPC(1, 1) STD(0, 0) 
+4-JMB-F-2-2: STD(0, 0) STD(0, 0) SPC(1, 1) SPC(1, 1) 
+Solucion 4:
+1-JMB-T-0-2: SPC(1, 1) SPC(1, 1) STD(0, 0) STD(0, 0) 
+2-STD-F-2-0: SPC(1, 1) SPC(1, 1) STD(0, 0) STD(0, 0) 
+3-STD-F-0-0: STD(0, 0) STD(0, 0) SPC(1, 1) SPC(1, 1) 
+4-JMB-F-2-2: STD(0, 0) STD(0, 0) SPC(1, 1) SPC(1, 1) 
+Solucion 5:
+1-JMB-T-0-2: SPC(1, 1) SPC(1, 1) STD(0, 0) STD(0, 0) 
+2-STD-F-2-0: SPC(1, 1) STD(0, 0) SPC(1, 1) SPC(1, 1) 
+3-STD-F-0-0: STD(0, 0) SPC(1, 1) STD(0, 0) STD(0, 0) 
+4-JMB-F-2-2: STD(0, 0) STD(0, 0) SPC(1, 1) SPC(1, 1) 
+Solucion 6:
+1-JMB-T-0-2: SPC(1, 1) SPC(1, 1) STD(0, 0) STD(0, 0) 
+2-STD-F-2-0: SPC(1, 1) STD(0, 0) SPC(1, 1) STD(0, 0) 
+3-STD-F-0-0: STD(0, 0) SPC(1, 1) STD(0, 0) SPC(1, 1) 
+4-JMB-F-2-2: STD(0, 0) STD(0, 0) SPC(1, 1) SPC(1, 1) 
+Solucion 7:
+1-JMB-T-0-2: SPC(1, 1) SPC(1, 1) STD(0, 0) STD(0, 0) 
+2-STD-F-2-0: SPC(1, 1) STD(0, 0) STD(0, 0) SPC(1, 1) 
+3-STD-F-0-0: STD(0, 0) SPC(1, 1) SPC(1, 1) STD(0, 0) 
+4-JMB-F-2-2: STD(0, 0) STD(0, 0) SPC(1, 1) SPC(1, 1) 
+Solucion 8:
+1-JMB-T-0-2: SPC(1, 1) SPC(1, 1) STD(0, 0) STD(0, 0) 
+2-STD-F-2-0: SPC(1, 1) STD(0, 0) STD(0, 0) STD(0, 0) 
+3-STD-F-0-0: STD(0, 0) SPC(1, 1) SPC(1, 1) SPC(1, 1) 
+4-JMB-F-2-2: STD(0, 0) STD(0, 0) SPC(1, 1) SPC(1, 1) 
+Solucion 9:
+1-JMB-T-0-2: SPC(1, 1) SPC(1, 1) STD(0, 0) STD(0, 0) 
+2-STD-F-2-0: STD(0, 0) SPC(1, 1) SPC(1, 1) SPC(1, 1) 
+3-STD-F-0-0: SPC(1, 1) STD(0, 0) STD(0, 0) STD(0, 0) 
+4-JMB-F-2-2: STD(0, 0) STD(0, 0) SPC(1, 1) SPC(1, 1) 
+Solucion 10:
+1-JMB-T-0-2: SPC(1, 1) SPC(1, 1) STD(0, 0) STD(0, 0) 
+2-STD-F-2-0: STD(0, 0) SPC(1, 1) SPC(1, 1) STD(0, 0) 
+3-STD-F-0-0: SPC(1, 1) STD(0, 0) STD(0, 0) SPC(1, 1) 
+4-JMB-F-2-2: STD(0, 0) STD(0, 0) SPC(1, 1) SPC(1, 1) 
+Solucion 11:
+1-JMB-T-0-2: SPC(1, 1) SPC(1, 1) STD(0, 0) STD(0, 0) 
+2-STD-F-2-0: STD(0, 0) SPC(1, 1) STD(0, 0) SPC(1, 1) 
+3-STD-F-0-0: SPC(1, 1) STD(0, 0) SPC(1, 1) STD(0, 0) 
+4-JMB-F-2-2: STD(0, 0) STD(0, 0) SPC(1, 1) SPC(1, 1) 
+Solucion 12:
+1-JMB-T-0-2: SPC(1, 1) SPC(1, 1) STD(0, 0) STD(0, 0) 
+2-STD-F-2-0: STD(0, 0) SPC(1, 1) STD(0, 0) STD(0, 0) 
+3-STD-F-0-0: SPC(1, 1) STD(0, 0) SPC(1, 1) SPC(1, 1) 
+4-JMB-F-2-2: STD(0, 0) STD(0, 0) SPC(1, 1) SPC(1, 1) 
+Solucion 13:
+1-JMB-T-0-2: SPC(1, 1) SPC(1, 1) STD(0, 0) STD(0, 0) 
+2-STD-F-2-0: STD(0, 0) STD(0, 0) SPC(1, 1) SPC(1, 1) 
+3-STD-F-0-0: SPC(1, 1) SPC(1, 1) STD(0, 0) STD(0, 0) 
+4-JMB-F-2-2: STD(0, 0) STD(0, 0) SPC(1, 1) SPC(1, 1) 
+Solucion 14:
+1-JMB-T-0-2: SPC(1, 1) SPC(1, 1) STD(0, 0) STD(0, 0) 
+2-STD-F-2-0: STD(0, 0) STD(0, 0) SPC(1, 1) STD(0, 0) 
+3-STD-F-0-0: SPC(1, 1) SPC(1, 1) STD(0, 0) SPC(1, 1) 
+4-JMB-F-2-2: STD(0, 0) STD(0, 0) SPC(1, 1) SPC(1, 1) 
+Solucion 15:
+1-JMB-T-0-2: SPC(1, 1) SPC(1, 1) STD(0, 0) STD(0, 0) 
+2-STD-F-2-0: STD(0, 0) STD(0, 0) STD(0, 0) SPC(1, 1) 
+3-STD-F-0-0: SPC(1, 1) SPC(1, 1) SPC(1, 1) STD(0, 0) 
+4-JMB-F-2-2: STD(0, 0) STD(0, 0) SPC(1, 1) SPC(1, 1) 
+Solucion 16:
+1-JMB-T-0-2: SPC(1, 1) SPC(1, 1) STD(0, 0) STD(0, 0) 
+2-STD-F-2-0: STD(0, 0) STD(0, 0) STD(0, 0) STD(0, 0) 
+3-STD-F-0-0: SPC(1, 1) SPC(1, 1) SPC(1, 1) SPC(1, 1) 
+4-JMB-F-2-2: STD(0, 0) STD(0, 0) SPC(1, 1) SPC(1, 1) 

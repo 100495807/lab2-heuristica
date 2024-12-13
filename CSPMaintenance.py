@@ -1,158 +1,197 @@
 import sys
-from constraint import Problem
 import time
-import csv
+from constraint import Problem
+from collections import defaultdict
+import re
 
-# Función para leer los datos desde un archivo
-def leer_datos_archivo(ruta):
-    with open(ruta, 'r') as archivo:
-        lineas = archivo.read().strip().split('\n')
+class GestionDeArchivos:
+    def __init__(self):
+        pass
 
-    franjas_horarias = int(lineas[0])
-    tamanio_matriz = tuple(map(int, lineas[1].split('x')))
+    # Función para extraer las posiciones de los talleres
+    def extraer_posiciones(self, cadena):
+        posiciones_str = cadena.split(":")[1].strip()
+        posiciones = [tuple(map(int, re.findall(r'\d+', pos))) for pos in posiciones_str.split()]
+        return posiciones
 
-    talleres_std = [tuple(map(int, pos.strip('()').split(','))) for pos in lineas[2].split()]
-    talleres_spc = [tuple(map(int, pos.strip('()').split(','))) for pos in lineas[3].split()]
-    parkings = [tuple(map(int, pos.strip('()').split(','))) for pos in lineas[4].split()]
-
-    aviones = []
-    for avion in lineas[5:]:
-        partes = avion.split('-')
-        aviones.append({
-            "ID": int(partes[0]),
+    # Función para extraer los datos de un avión
+    def extraer_avion(self, cadena):
+        partes = cadena.strip().split("-")
+        return {
+            "ID": partes[0],
             "TIPO": partes[1],
-            "RESTR": partes[2] == 'T',
+            "RESTR": partes[2],
             "T1": int(partes[3]),
             "T2": int(partes[4])
-        })
+        }
 
-    return franjas_horarias, tamanio_matriz, talleres_std, talleres_spc, parkings, aviones
+    # Función para cargar los datos del archivo
+    def cargar_datos_archivo(self, ruta_archivo):
+        with open(ruta_archivo, "r") as archivo:
+            lineas = archivo.readlines()
 
-# Función para escribir las soluciones en un archivo CSV
-def escribir_soluciones_csv(ruta, soluciones, aviones, franjas_horarias, talleres_std, talleres_spc, parkings):
-    with open(ruta, 'w', newline='') as archivo_csv:
-        escritor = csv.writer(archivo_csv)
-        escritor.writerow([f"N. Sol: {len(soluciones)}"])
+        num_franjas = int(lineas[0].split(":")[1].strip())
+        dimensiones = tuple(map(int, lineas[1].strip().split("x")))
 
-        for idx, solucion in enumerate(soluciones[:5], start=1):
-            escritor.writerow([f"Solución {idx}:"])
-            for avion in aviones:
-                asignaciones = []
-                for franja in range(franjas_horarias):
-                    pos = solucion[f"Avion{avion['ID']}_Franja{franja}"]
-                    # Determinar el tipo de posición (STD, SPC o PRK)
-                    if pos in talleres_std:
-                        tipo = "STD"
-                    elif pos in talleres_spc:
-                        tipo = "SPC"
-                    elif pos in parkings:
-                        tipo = "PRK"
-                    else:
-                        tipo = "UNK"  # Por si hay un error en los datos
-                    asignaciones.append(f"{tipo}{pos}")
+        talleres_estandar = self.extraer_posiciones(lineas[2])
+        talleres_especiales = self.extraer_posiciones(lineas[3])
+        estacionamientos = self.extraer_posiciones(lineas[4])
 
-                escritor.writerow([
-                    f"{avion['ID']}-{avion['TIPO']}-{avion['RESTR']}-{avion['T1']}-{avion['T2']}: " + ", ".join(asignaciones)
-                ])
+        lista_aviones = [self.extraer_avion(linea) for linea in lineas[5:]]
 
-# Función principal
-def resolver_problema(ruta_entrada):
-    start_time = time.time()
-    franjas_horarias, tamanio_matriz, talleres_std, talleres_spc, parkings, aviones = leer_datos_archivo(ruta_entrada)
+        return num_franjas, dimensiones, talleres_estandar, talleres_especiales, estacionamientos, lista_aviones
 
-    print("Iniciando el modelo...")
+    # Guardar resultados
+    def guardar_resultados(self, ruta_salida, soluciones, aviones, franjas, talleres_especiales, talleres_estandar):
+        with open(ruta_salida, 'w') as archivo:
+            archivo.write(f"N. Sol: {len(soluciones)}\n")
+            if not soluciones:
+                archivo.write("No se encontraron soluciones válidas.\n")
+                print("No se encontraron soluciones válidas.")
+                return
 
-    # Crear el problema
+            for i, solucion in enumerate(soluciones):
+                archivo.write(f"Solucion {i + 1}:\n")
+                for avion in aviones:
+                    archivo.write(f"{avion['ID']}-{avion['TIPO']}-{avion['RESTR']}-{avion['T1']}-{avion['T2']}: ")
+                    for franja in range(franjas):
+                        posicion = solucion[f"{avion['ID']}-{franja}"]
+                        if posicion in talleres_especiales:
+                            tipo_taller = "SPC"
+                        elif posicion in talleres_estandar:
+                            tipo_taller = "STD"
+                        else:
+                            tipo_taller = "PRK"
+                        archivo.write(f"{tipo_taller}{posicion} ")
+                    archivo.write("\n")
+
+
+# configuración del problema
+def configuracion_problema(num_franjas, tamano, talleres_estandar, talleres_especiales, parkings, aviones):
     problem = Problem()
 
-    # Generar variables y dominios
+    dominio = talleres_estandar + talleres_especiales + parkings
+
+    # Variables
     for avion in aviones:
-        for franja in range(franjas_horarias):
-            variable = f"Avion{avion['ID']}_Franja{franja}"
+        for franja in range(num_franjas):
+            problem.addVariable(f"{avion['ID']}-{franja}", dominio)
 
-            # Dominios iniciales según las restricciones de talleres
-            dominios = []
-            for pos in parkings + talleres_std + talleres_spc:
-                if pos in parkings or \
-                   (pos in talleres_std and avion['TIPO'] == 'STD') or \
-                   (pos in talleres_spc and avion['RESTR']):
-                    dominios.append(pos)
+    # Restricción: Máximo 2 aviones por taller
+    def restriccion_max_2_aviones(*asignaciones):
+        conteo_talleres = defaultdict(int)
+        for posicion in asignaciones:
+            conteo_talleres[posicion] += 1
+            if conteo_talleres[posicion] > 2:
+                return False
+        return True
 
-            problem.addVariable(variable, dominios)
+    # Restricción: Máximo 1 JUMBO por taller
+    def restriccion_max_1_jumbo(*asignaciones):
+        conteo_jumbo = defaultdict(int)
+        for avion, posicion in zip(aviones, asignaciones):
+            if avion["TIPO"] == "JMB":
+                conteo_jumbo[posicion] += 1
+                if conteo_jumbo[posicion] > 1:
+                    return False
+        return True
 
-    print("Variables y dominios generados.")
-
-    # Restricción 2: Capacidad de talleres
-    for pos in talleres_std + talleres_spc:
-        for franja in range(franjas_horarias):
-            taller_vars = [
-                f"Avion{avion['ID']}_Franja{franja}"
-                for avion in aviones
-            ]
-
-            def max_dos_aviones(*args, taller=pos):
-                return len([v for v in args if v == taller]) <= 2
-
-            problem.addConstraint(max_dos_aviones, taller_vars)
-
-    print("Restricción de capacidad añadida.")
-
-    # Restricción 3 y 4: Talleres especialistas y orden de tareas
-    for avion in aviones:
-        if avion["RESTR"]:
-            for franja in range(avion["T2"], franjas_horarias):
-                variable = f"Avion{avion['ID']}_Franja{franja}"
-
-                def especialista(pos):
-                    return pos in talleres_spc
-
-                problem.addConstraint(especialista, [variable])
-
-    print("Restricción de talleres especialistas añadida.")
-
-    # Restricción adicional 1: Evitar colisiones adyacentes
-    for franja in range(franjas_horarias):
+    # Restricción: Completar tareas en talleres válidos con orden si aplica
+    def restriccion_tareas(*asignaciones):
         for avion in aviones:
-            var = f"Avion{avion['ID']}_Franja{franja}"
-            for other_avion in aviones:
-                if avion["ID"] != other_avion["ID"]:
-                    other_var = f"Avion{other_avion['ID']}_Franja{franja}"
+            tareas_restantes = {"T1": avion["T1"], "T2": avion["T2"]}
+            talleres_spc_count = 0
+            talleres_count = 0
 
-                    def no_adyacentes(a, b):
-                        return abs(a[0] - b[0]) + abs(a[1] - b[1]) > 1
+            for franja in range(num_franjas):
+                posicion = asignaciones[aviones.index(avion) * num_franjas + franja]
+                if posicion in talleres_especiales:
+                    talleres_spc_count += 1
+                    talleres_count += 1
+                    if tareas_restantes["T2"] > 0:
+                        tareas_restantes["T2"] -= 1
+                    elif avion["RESTR"] == "T" and tareas_restantes["T2"] == 0 and tareas_restantes["T1"] > 0:
+                        tareas_restantes["T1"] -= 1
+                elif posicion in talleres_estandar:
+                    talleres_count += 1
+                    if tareas_restantes["T2"] > 0 and avion["RESTR"] == "T":
+                        return False
+                    if tareas_restantes["T1"] > 0:
+                        tareas_restantes["T1"] -= 1
 
-                    problem.addConstraint(no_adyacentes, (var, other_var))
+            # Validar que las tareas tipo 2 se realizaron en talleres especializados
+            if talleres_spc_count < avion["T2"]:
+                return False
 
-    print("Restricción de colisiones adyacentes añadida.")
+            # Validar que las tareas tipo 1 se realizaron en talleres válidos
+            if talleres_count < avion["T1"] + avion["T2"]:
+                return False
 
-    # Restricción adicional 2: No más de un JUMBO por taller
-    for pos in talleres_std + talleres_spc:
-        for franja in range(franjas_horarias):
-            jumbo_vars = [
-                f"Avion{avion['ID']}_Franja{franja}"
-                for avion in aviones if avion["TIPO"] == "JMB"
-            ]
+        return True
 
-            def max_un_jumbo(*args, taller=pos):
-                return len([v for v in args if v == taller]) <= 1
+    # Restricción: Asegurar adyacencia libre
+    def restriccion_adyacencia(*asignaciones):
+        ocupados = set(asignaciones)
+        for posicion in ocupados:
+            if posicion in parkings + talleres_estandar + talleres_especiales:
+                x, y = posicion
+                adyacentes = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
+                if all(adj in ocupados for adj in adyacentes if adj in dominio):
+                    return False
+        return True
 
-            problem.addConstraint(max_un_jumbo, jumbo_vars)
+    # Restricción: Evitar aviones JUMBO adyacentes
+    def restriccion_jumbos_no_adyacentes(*asignaciones):
+        posiciones_jumbos = [pos for avion, pos in zip(aviones, asignaciones) if avion["TIPO"] == "JMB"]
+        for pos in posiciones_jumbos:
+            x, y = pos
+            adyacentes = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
+            if any(adj in posiciones_jumbos for adj in adyacentes if adj in dominio):
+                return False
+        return True
 
-    print("Restricción de aviones JUMBO añadida.")
+    for franja in range(num_franjas):
+        variables_franja = [f"{avion['ID']}-{franja}" for avion in aviones]
+        problem.addConstraint(restriccion_max_2_aviones, variables_franja)
+        problem.addConstraint(restriccion_max_1_jumbo, variables_franja)
+        problem.addConstraint(restriccion_adyacencia, variables_franja)
+        problem.addConstraint(restriccion_jumbos_no_adyacentes, variables_franja)
+
+    # Añadir restricciones
+    problem.addConstraint(restriccion_tareas, [f"{avion['ID']}-{franja}" for avion in aviones for franja in range(num_franjas)])
+
+    return problem
+
+# Main function
+def main():
+    if len(sys.argv) != 2:
+        raise ValueError("Formato valido: python CSPMaintenance.py <path maintenance>")
+
+    archivo_entrada = sys.argv[1]
+    archivo_salida = archivo_entrada.replace(".txt", ".csv")
+
+    # Instanciar la clase
+    gestion = GestionDeArchivos()
+
+    # Cargar datos del archivo
+    franjas, tamano, talleres_std, talleres_spc, parkings, aviones = gestion.cargar_datos_archivo(archivo_entrada)
+
+    # Imprimir datos
+    print(f"Franjas: {franjas} \nTamaño de la matriz: {tamano} \nTalleres STD: {talleres_std} "
+          f"\nTalleres SPC: {talleres_spc} \nParkings: {parkings} \nAviones: {aviones}")
+
+    # Configurar el problema
+    problem = configuracion_problema(franjas, tamano, talleres_std, talleres_spc, parkings, aviones)
 
     # Resolver el problema
-    print("Resolviendo...")
-    soluciones = problem.getSolutions()
+    start_time = time.time()
+    solutions = problem.getSolutions()
+    end_time = time.time()
+    final_time = end_time - start_time
 
-    # Guardar soluciones en un archivo CSV
-    ruta_salida = ruta_entrada.replace('.txt', '.csv')
-    escribir_soluciones_csv(ruta_salida, soluciones, aviones, franjas_horarias, talleres_std, talleres_spc, parkings)
+    print(f"Tiempo: {final_time:.2f} segundos \nNúmero de soluciones encontradas: {len(solutions)}")
 
-    print(f"Tiempo total de ejecución: {time.time() - start_time:.2f} segundos")
-    print(f"Se encontraron {len(soluciones)} soluciones. Soluciones guardadas en {ruta_salida}")
+    gestion.guardar_resultados(archivo_salida, solutions, aviones, franjas, talleres_spc, talleres_std)
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Uso: python CSPMaintenance.py <path maintenance>")
-    else:
-        resolver_problema(sys.argv[1])
+    main()
