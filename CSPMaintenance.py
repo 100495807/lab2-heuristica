@@ -4,6 +4,42 @@ from constraint import Problem
 from collections import defaultdict
 import re
 
+class CSPMaintenance:
+    def __init__(self, archivo_entrada):
+        self.archivo_entrada = archivo_entrada
+        self.archivo_salida = archivo_entrada.replace(".txt", ".csv")
+        self.gestion = GestionDeArchivos()
+
+    def cargar_datos(self):
+        try:
+            print("Cargando datos...")
+            self.franjas, self.tamano, self.talleres_std, self.talleres_spc, self.parkings, self.aviones = self.gestion.cargar_datos_archivo(self.archivo_entrada)
+        except Exception as e:
+            raise ValueError(f"Error al cargar los datos del archivo: {e}")
+
+    def configurar_problema(self):
+        self.problem = configuracion_problema(self.franjas, self.tamano, self.talleres_std, self.talleres_spc, self.parkings, self.aviones)
+
+    def resolver_problema(self):
+        start_time = time.time()
+        self.solutions = self.problem.getSolutions()
+        end_time = time.time()
+        self.final_time = end_time - start_time
+
+    def guardar_resultados(self):
+        print("Guardando resultados...")
+        self.gestion.guardar_resultados(self.archivo_salida, self.solutions, self.aviones, self.franjas, self.talleres_spc, self.talleres_std)
+
+    def ejecutar(self):
+        self.cargar_datos()
+        print(f"Franjas: {self.franjas} \nTamaño de la matriz: {self.tamano} \nTalleres STD: {self.talleres_std} "
+              f"\nTalleres SPC: {self.talleres_spc} \nParkings: {self.parkings} \nAviones: {self.aviones}")
+        self.configurar_problema()
+        self.resolver_problema()
+        print(f"Tiempo: {self.final_time:.2f} segundos \nNúmero de soluciones encontradas: {len(self.solutions)}")
+        self.guardar_resultados()
+        print("Proceso finalizado.")
+
 class GestionDeArchivos:
     def __init__(self):
         pass
@@ -68,14 +104,16 @@ class GestionDeArchivos:
 
 # configuración del problema
 def configuracion_problema(num_franjas, tamano, talleres_estandar, talleres_especiales, parkings, aviones):
-    problem = Problem()
+
+    # Creamos el problema
+    problema = Problem()
 
     dominio = talleres_estandar + talleres_especiales + parkings
 
     # Variables
     for avion in aviones:
         for franja in range(num_franjas):
-            problem.addVariable(f"{avion['ID']}-{franja}", dominio)
+            problema.addVariable(f"{avion['ID']}-{franja}", dominio)
 
     # Restricción: Máximo 2 aviones por taller
     def restriccion_max_2_aviones(*asignaciones):
@@ -89,49 +127,61 @@ def configuracion_problema(num_franjas, tamano, talleres_estandar, talleres_espe
     # Restricción: Máximo 1 JUMBO por taller
     def restriccion_max_1_jumbo(*asignaciones):
         conteo_jumbo = defaultdict(int)
-        for avion, posicion in zip(aviones, asignaciones):
+        # Agrupar elementos de las listas usando comprensión de listas
+        resultado_lista = [(aviones[i], asignaciones[i]) for i in range(min(len(aviones), len(asignaciones)))]
+        for avion, posicion in resultado_lista:
             if avion["TIPO"] == "JMB":
                 conteo_jumbo[posicion] += 1
                 if conteo_jumbo[posicion] > 1:
                     return False
         return True
 
+    for franja in range(num_franjas):
+        variables_franja = [f"{avion['ID']}-{franja}" for avion in aviones]
+        problema.addConstraint(restriccion_max_2_aviones, variables_franja)
+        problema.addConstraint(restriccion_max_1_jumbo, variables_franja)
+
     # Restricción: Completar tareas en talleres válidos con orden si aplica
     def restriccion_tareas(*asignaciones):
         for avion in aviones:
+            talleres_spc_cont = 0
+            talleres_cont = 0
             tareas_restantes = {"T1": avion["T1"], "T2": avion["T2"]}
-            talleres_spc_count = 0
-            talleres_count = 0
 
             for franja in range(num_franjas):
                 posicion = asignaciones[aviones.index(avion) * num_franjas + franja]
                 if posicion in talleres_especiales:
-                    talleres_spc_count += 1
-                    talleres_count += 1
+                    talleres_spc_cont += 1
+                    talleres_cont += 1
                     if tareas_restantes["T2"] > 0:
                         tareas_restantes["T2"] -= 1
                     elif avion["RESTR"] == "T" and tareas_restantes["T2"] == 0 and tareas_restantes["T1"] > 0:
                         tareas_restantes["T1"] -= 1
                 elif posicion in talleres_estandar:
-                    talleres_count += 1
+                    talleres_cont += 1
                     if tareas_restantes["T2"] > 0 and avion["RESTR"] == "T":
                         return False
                     if tareas_restantes["T1"] > 0:
                         tareas_restantes["T1"] -= 1
 
-            # Validar que las tareas tipo 2 se realizaron en talleres especializados
-            if talleres_spc_count < avion["T2"]:
+            # Verrificar que las Tareas de tipo 2 se realizaron en talleres especiales
+            if talleres_spc_cont < avion["T2"]:
                 return False
 
-            # Validar que las tareas tipo 1 se realizaron en talleres válidos
-            if talleres_count < avion["T1"] + avion["T2"]:
+            # Verificar que las Tareas de tipo 1 se realizaron en talleres especiales o estandar
+            if talleres_cont < avion["T1"] + avion["T2"]:
                 return False
 
         return True
 
+    # Añadir restricciones
+    problema.addConstraint(restriccion_tareas, [f"{avion['ID']}-{franja}" for avion in aviones for franja in range(num_franjas)])
+
     # Restricción: Asegurar adyacencia libre
     def restriccion_adyacencia(*asignaciones):
-        ocupados = set(asignaciones)
+        ocupados = set()
+        for asignacion in asignaciones:
+            ocupados.add(asignacion)
         for posicion in ocupados:
             if posicion in parkings + talleres_estandar + talleres_especiales:
                 x, y = posicion
@@ -140,9 +190,15 @@ def configuracion_problema(num_franjas, tamano, talleres_estandar, talleres_espe
                     return False
         return True
 
+    for franja in range(num_franjas):
+        variables_franja = [f"{avion['ID']}-{franja}" for avion in aviones]
+        problema.addConstraint(restriccion_adyacencia, variables_franja)
+
     # Restricción: Evitar aviones JUMBO adyacentes
     def restriccion_jumbos_no_adyacentes(*asignaciones):
-        posiciones_jumbos = [pos for avion, pos in zip(aviones, asignaciones) if avion["TIPO"] == "JMB"]
+        # Agrupar elementos de las listas usando comprensión de listas
+        resultado_lista = [(aviones[i], asignaciones[i]) for i in range(min(len(aviones), len(asignaciones)))]
+        posiciones_jumbos = [pos for avion, pos in resultado_lista if avion["TIPO"] == "JMB"]
         for pos in posiciones_jumbos:
             x, y = pos
             adyacentes = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
@@ -152,46 +208,18 @@ def configuracion_problema(num_franjas, tamano, talleres_estandar, talleres_espe
 
     for franja in range(num_franjas):
         variables_franja = [f"{avion['ID']}-{franja}" for avion in aviones]
-        problem.addConstraint(restriccion_max_2_aviones, variables_franja)
-        problem.addConstraint(restriccion_max_1_jumbo, variables_franja)
-        problem.addConstraint(restriccion_adyacencia, variables_franja)
-        problem.addConstraint(restriccion_jumbos_no_adyacentes, variables_franja)
+        problema.addConstraint(restriccion_jumbos_no_adyacentes, variables_franja)
 
-    # Añadir restricciones
-    problem.addConstraint(restriccion_tareas, [f"{avion['ID']}-{franja}" for avion in aviones for franja in range(num_franjas)])
+    return problema
 
-    return problem
 
-# Main function
 def main():
     if len(sys.argv) != 2:
         raise ValueError("Formato valido: python CSPMaintenance.py <path maintenance>")
 
     archivo_entrada = sys.argv[1]
-    archivo_salida = archivo_entrada.replace(".txt", ".csv")
-
-    # Instanciar la clase
-    gestion = GestionDeArchivos()
-
-    # Cargar datos del archivo
-    franjas, tamano, talleres_std, talleres_spc, parkings, aviones = gestion.cargar_datos_archivo(archivo_entrada)
-
-    # Imprimir datos
-    print(f"Franjas: {franjas} \nTamaño de la matriz: {tamano} \nTalleres STD: {talleres_std} "
-          f"\nTalleres SPC: {talleres_spc} \nParkings: {parkings} \nAviones: {aviones}")
-
-    # Configurar el problema
-    problem = configuracion_problema(franjas, tamano, talleres_std, talleres_spc, parkings, aviones)
-
-    # Resolver el problema
-    start_time = time.time()
-    solutions = problem.getSolutions()
-    end_time = time.time()
-    final_time = end_time - start_time
-
-    print(f"Tiempo: {final_time:.2f} segundos \nNúmero de soluciones encontradas: {len(solutions)}")
-
-    gestion.guardar_resultados(archivo_salida, solutions, aviones, franjas, talleres_spc, talleres_std)
+    csp_maintenance = CSPMaintenance(archivo_entrada)
+    csp_maintenance.ejecutar()
 
 if __name__ == "__main__":
     main()
