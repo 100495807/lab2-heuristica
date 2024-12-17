@@ -4,6 +4,7 @@ from constraint import Problem
 from collections import defaultdict
 import re
 
+
 class CSPMaintenance:
     def __init__(self, archivo_entrada):
         self.archivo_entrada = archivo_entrada
@@ -13,12 +14,14 @@ class CSPMaintenance:
     def cargar_datos(self):
         try:
             print("Cargando datos...")
-            self.franjas, self.tamano, self.talleres_std, self.talleres_spc, self.parkings, self.aviones = self.gestion.cargar_datos_archivo(self.archivo_entrada)
+            self.franjas, self.tamano, self.talleres_std, self.talleres_spc, self.parkings, self.aviones = self.gestion.cargar_datos_archivo(
+                self.archivo_entrada)
         except Exception as e:
             raise ValueError(f"Error al cargar los datos del archivo: {e}")
 
     def configurar_problema(self):
-        self.problem = configuracion_problema(self.franjas, self.tamano, self.talleres_std, self.talleres_spc, self.parkings, self.aviones)
+        self.problem = configuracion_problema(self.franjas, self.tamano, self.talleres_std, self.talleres_spc,
+                                              self.parkings, self.aviones)
 
     def resolver_problema(self):
         start_time = time.time()
@@ -28,7 +31,8 @@ class CSPMaintenance:
 
     def guardar_resultados(self):
         print("Guardando resultados...")
-        self.gestion.guardar_resultados(self.archivo_salida, self.solutions, self.aviones, self.franjas, self.talleres_spc, self.talleres_std)
+        self.gestion.guardar_resultados(self.archivo_salida, self.solutions, self.aviones, self.franjas,
+                                        self.talleres_spc, self.talleres_std)
 
     def ejecutar(self):
         self.cargar_datos()
@@ -39,6 +43,7 @@ class CSPMaintenance:
         print(f"Tiempo: {self.final_time:.2f} segundos \nNúmero de soluciones encontradas: {len(self.solutions)}")
         self.guardar_resultados()
         print("Proceso finalizado.")
+
 
 class GestionDeArchivos:
     def __init__(self):
@@ -104,7 +109,6 @@ class GestionDeArchivos:
 
 # configuración del problema
 def configuracion_problema(num_franjas, tamano, talleres_estandar, talleres_especiales, parkings, aviones):
-
     # Creamos el problema
     problema = Problem()
 
@@ -175,7 +179,8 @@ def configuracion_problema(num_franjas, tamano, talleres_estandar, talleres_espe
         return True
 
     # Añadir restricciones
-    problema.addConstraint(restriccion_tareas, [f"{avion['ID']}-{franja}" for avion in aviones for franja in range(num_franjas)])
+    problema.addConstraint(restriccion_tareas,
+                           [f"{avion['ID']}-{franja}" for avion in aviones for franja in range(num_franjas)])
 
     # Restricción: Asegurar adyacencia libre
     def restriccion_adyacencia(*asignaciones):
@@ -220,6 +225,7 @@ def main():
     archivo_entrada = sys.argv[1]
     csp_maintenance = CSPMaintenance(archivo_entrada)
     csp_maintenance.ejecutar()
+
 
 if __name__ == "__main__":
     main()
