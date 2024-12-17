@@ -86,7 +86,7 @@ class GestionDeArchivos:
                 print("No se encontraron soluciones válidas.")
                 return
 
-            for i, solucion in enumerate(soluciones):
+            for i, solucion in enumerate(soluciones[:50]):
                 archivo.write(f"Solucion {i + 1}:\n")
                 for avion in aviones:
                     archivo.write(f"{avion['ID']}-{avion['TIPO']}-{avion['RESTR']}-{avion['T1']}-{avion['T2']}: ")

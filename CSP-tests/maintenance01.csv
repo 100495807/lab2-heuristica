@@ -1,0 +1,28 @@
+N. Sol: 9
+Solucion 1:
+1-JMB-T-0-2: SPC(1, 1) SPC(1, 1) 
+2-STD-F-2-0: SPC(1, 1) SPC(1, 1) 
+Solucion 2:
+1-JMB-T-0-2: SPC(1, 1) SPC(1, 1) 
+2-STD-F-2-0: SPC(1, 1) STD(0, 1) 
+Solucion 3:
+1-JMB-T-0-2: SPC(1, 1) SPC(1, 1) 
+2-STD-F-2-0: SPC(1, 1) STD(0, 0) 
+Solucion 4:
+1-JMB-T-0-2: SPC(1, 1) SPC(1, 1) 
+2-STD-F-2-0: STD(0, 1) SPC(1, 1) 
+Solucion 5:
+1-JMB-T-0-2: SPC(1, 1) SPC(1, 1) 
+2-STD-F-2-0: STD(0, 1) STD(0, 1) 
+Solucion 6:
+1-JMB-T-0-2: SPC(1, 1) SPC(1, 1) 
+2-STD-F-2-0: STD(0, 1) STD(0, 0) 
+Solucion 7:
+1-JMB-T-0-2: SPC(1, 1) SPC(1, 1) 
+2-STD-F-2-0: STD(0, 0) SPC(1, 1) 
+Solucion 8:
+1-JMB-T-0-2: SPC(1, 1) SPC(1, 1) 
+2-STD-F-2-0: STD(0, 0) STD(0, 1) 
+Solucion 9:
+1-JMB-T-0-2: SPC(1, 1) SPC(1, 1) 
+2-STD-F-2-0: STD(0, 0) STD(0, 0) 
