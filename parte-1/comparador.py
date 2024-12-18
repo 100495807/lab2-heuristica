@@ -58,7 +58,7 @@ def mostrar_reporte(similitud_ast, nodos_ast, similitud_tokens):
         for nodo, cantidad in contador2.items():
             print(f"  {nodo}: {cantidad}")
 
-    print(f"\nSimilitud de tokens: {similitud_tokens:.2f}%")
+    print(f"\nSimilitud de tokens: {similitud_tokens:.6f}%")
     if similitud_ast > 80 or similitud_tokens > 80:
         print("\n⚠️ Los códigos son altamente similares. Podrían ser detectados como plagio.")
     elif similitud_ast > 50 or similitud_tokens > 50:

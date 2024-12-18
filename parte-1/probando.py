@@ -46,7 +46,7 @@ class MaintenanceScheduler:
             f"\nTalleres especiales (SPC): {self.special_workshops} \nParkings (PRK): {self.parking_spots} \nAviones: {self.aircrafts}")
         self.setup_problem()
         self.solve_problem()
-        print(f"Tiempo de ejecucion: {self.execution_time:.2f} segundos \nNumero de soluciones encontradas: {len(self.solutions)}")
+        print(f"Tiempo de ejecucion: {self.execution_time:.10f} segundos \nNumero de soluciones encontradas: {len(self.solutions)}")
         self.save_results()
         print("Proces0 completado.")
 
@@ -126,9 +126,12 @@ def setup_problem(num_time_slots, matrix_size, standard_workshops, special_works
 
     # Restricción en la que solo puede haber un JMB por taller
     def max_1_jumbo_per_workshop(*assignments):
-        jumbo_counts = defaultdict(int)
-        for aircraft, position in zip(aircrafts, assignments):
+        jumbo_counts = {}
+        list_result = [(aircrafts[i], assignments[i]) for i in range(min(len(aircrafts), len(assignments)))]
+        for aircraft, position in list_result:
             if aircraft["TIPO"] == "JMB":
+                if position not in jumbo_counts:
+                    jumbo_counts[position] = 0
                 jumbo_counts[position] += 1
                 if jumbo_counts[position] > 1:
                     return False
@@ -139,10 +142,12 @@ def setup_problem(num_time_slots, matrix_size, standard_workshops, special_works
         variables_for_time_slot = [f"{aircraft['ID']}-{time_slot}" for aircraft in aircrafts]
         problem.addConstraint(max_1_jumbo_per_workshop, variables_for_time_slot)
 
-    # Restrcicción en la que no puede haber mas de 2 aviones en un taller
+    # Restricción en la que no puede haber más de 2 aviones en un taller
     def max_2_aircrafts_per_workshop(*assignments):
-        workshop_counts = defaultdict(int)
+        workshop_counts = {}
         for position in assignments:
+            if position not in workshop_counts:
+                workshop_counts[position] = 0
             workshop_counts[position] += 1
             if workshop_counts[position] > 2:
                 return False
@@ -191,7 +196,8 @@ def setup_problem(num_time_slots, matrix_size, standard_workshops, special_works
 
     # Restricción en la que no puede haber aviones JUMBO adyacentes
     def no_adjacent_jumbo(*assignments):
-        jumbo_positions = [pos for aircraft, pos in zip(aircrafts, assignments) if aircraft["TIPO"] == "JMB"]
+        list_result = [(aircrafts[i], assignments[i]) for i in range(min(len(aircrafts), len(assignments)))]
+        jumbo_positions = [pos for aircraft, pos in list_result if aircraft["TIPO"] == "JMB"]
         for pos in jumbo_positions:
             x, y = pos
             neighbors = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
@@ -219,8 +225,6 @@ def setup_problem(num_time_slots, matrix_size, standard_workshops, special_works
     for time_slot in range(num_time_slots):
         variables_for_time_slot = [f"{aircraft['ID']}-{time_slot}" for aircraft in aircrafts]
         problem.addConstraint(no_adjacent_occupancy, variables_for_time_slot)
-
-
 
     return problem
 

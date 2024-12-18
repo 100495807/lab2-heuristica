@@ -45,6 +45,27 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\parte-1\CSP-tests\maintenance01.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\parte-1\CSP-tests\maintenance02.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\parte-1\CSP-tests\maintenance03.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=":" />
+            </Attribute>
+          </value>
+        </entry>
       </map>
     </option>
   </component>

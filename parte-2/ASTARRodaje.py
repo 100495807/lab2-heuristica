@@ -1,170 +1,185 @@
 import time
 from itertools import product
 import sys
+import os
 
-def leer_mapa_csv(ruta):
-    with open(ruta, 'r') as archivo:
-        lineas = archivo.read().strip().split('\n')
+class MapInputReader:
+    @staticmethod
+    def read_map_input(ruta):
+        with open(ruta, 'r') as file:
+            lines = file.read().strip().split('\n')
 
-    n_aviones = int(lineas[0])
-    aviones = []
-    for i in range(1, n_aviones + 1):
-        inicio, fin = lineas[i].split()
-        aviones.append({
-            'init': tuple(map(int, inicio.strip('()').split(','))),
-            'goal': tuple(map(int, fin.strip('()').split(',')))
-        })
+        n_aircrafts = int(lines[0])
+        aircrafts = []
+        for i in range(1, n_aircrafts + 1):
+            init, goal = lines[i].split()
+            aircrafts.append({
+                'init': tuple(map(int, init.strip('()').split(','))),
+                'goal': tuple(map(int, goal.strip('()').split(',')))
+            })
 
-    mapa = [linea.split(';') for linea in lineas[n_aviones + 1:]]
-    return mapa, aviones
+        map_data = [linea.split(';') for linea in lines[n_aircrafts + 1:]]
+        return map_data, aircrafts
 
-def obtener_movimientos_validos(pos, mapa):
-    """Devuelve las posiciones adyacentes o la misma posición (si no es 'A') a las que puede moverse el avión."""
-    movimientos = [(0, 1), (0, -1), (1, 0), (-1, 0)]
-    x, y = pos
-    validos = [(x + dx, y + dy) for dx, dy in movimientos
-               if 0 <= x + dx < len(mapa) and 0 <= y + dy < len(mapa[0]) and mapa[x + dx][y + dy] != 'G']
-    # Permitir esperar si no es 'A'
-    if mapa[x][y] != 'A':
-        validos = [pos] + validos
-    return validos
+class Heuristics:
+    @staticmethod
+    def manhattan_heuristic(positions, goals):
+        return sum(abs(x - gx) + abs(y - gy) for (x, y), (gx, gy) in zip(positions, goals))
 
-def heuristica_manhattan(posiciones, metas):
-    """Heurística 1 (Suma de Manhattan): Suma de las distancias Manhattan de cada avión a su meta."""
-    return sum(abs(x - gx) + abs(y - gy) for (x, y), (gx, gy) in zip(posiciones, metas))
+    @staticmethod
+    def max_manhattan_heuristic(positions, goals):
+        distances = [abs(x - gx) + abs(y - gy) for (x, y), (gx, gy) in zip(positions, goals)]
+        return max(distances)
 
-def heuristica_max_manhattan(posiciones, metas):
-    """Heurística 2 (Máxima Manhattan): Máximo de las distancias Manhattan."""
-    distancias = [abs(x - gx) + abs(y - gy) for (x, y), (gx, gy) in zip(posiciones, metas)]
-    return max(distancias)
+class MovementValidator:
+    @staticmethod
+    def obtain_valid_movements(pos, map_data):
+        movements = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+        x, y = pos
+        valid = [(x + dx, y + dy) for dx, dy in movements
+                 if 0 <= x + dx < len(map_data) and 0 <= y + dy < len(map_data[0]) and map_data[x + dx][y + dy] != 'G']
+        if map_data[x][y] != 'A':
+            valid = [pos] + valid
+        return valid
 
-def generar_sucesores(estado, mapa, metas):
-    """Genera todos los sucesores posibles a partir del estado actual, cumpliendo las restricciones."""
-    sucesores = []
-    aviones = estado['posiciones']
-    tiempo = estado['tiempo']
-    movimientos_actuales = estado['movimientos']
-    direcciones = {(0, 1): '→', (0, -1): '←', (1, 0): '↓', (-1, 0): '↑', (0, 0): 'w'}
+class SuccessorGenerator:
+    @staticmethod
+    def generate_successors(state, map_data, goals):
+        successors = []
+        aircrafts = state['posiciones']
+        time = state['tiempo']
+        current_movements = state['movimientos']
+        directions = {(0, 1): '→', (0, -1): '←', (1, 0): '↓', (-1, 0): '↑', (0, 0): 'w'}
 
-    posibles_movimientos = []
-    for i, pos in enumerate(aviones):
-        if pos == metas[i]:
-            # Si el avión está en su meta, sólo puede esperar
-            posibles_movimientos.append([pos])
-        else:
-            movimientos_validos = obtener_movimientos_validos(pos, mapa)
-            posibles_movimientos.append(movimientos_validos)
+        possible_movements = []
+        for i, pos in enumerate(aircrafts):
+            if pos == goals[i]:
+                possible_movements.append([pos])
+            else:
+                valid_movements = MovementValidator.obtain_valid_movements(pos, map_data)
+                possible_movements.append(valid_movements)
 
-    for movimientos in product(*posibles_movimientos):
-        nuevas_posiciones = list(movimientos)
+        for movements in product(*possible_movements):
+            new_positions = list(movements)
+            if len(set(new_positions)) != len(new_positions):
+                continue
 
-        # Colisión directa: no dos aviones en la misma celda
-        if len(set(nuevas_posiciones)) != len(nuevas_posiciones):
-            continue
-
-        # Colisión cruzada: evitar intercambio de posiciones
-        colision_cruzada = False
-        for i in range(len(aviones)):
-            for j in range(i + 1, len(aviones)):
-                # Si el avión i va a la posición que tenía el j, y el j va a la posición que tenía el i
-                if nuevas_posiciones[i] == aviones[j] and nuevas_posiciones[j] == aviones[i]:
-                    colision_cruzada = True
+            cross_collision = False
+            for i in range(len(aircrafts)):
+                for j in range(i + 1, len(aircrafts)):
+                    if new_positions[i] == aircrafts[j] and new_positions[j] == aircrafts[i]:
+                        cross_collision = True
+                        break
+                if cross_collision:
                     break
-            if colision_cruzada:
-                break
 
-        if colision_cruzada:
-            continue
+            if cross_collision:
+                continue
 
-        # Generar sucesor válido
-        nuevo_movimientos = [m[:] for m in movimientos_actuales]
-        for i, (prev, nueva) in enumerate(zip(aviones, nuevas_posiciones)):
-            dx, dy = nueva[0] - prev[0], nueva[1] - prev[1]
-            movimiento_etiqueta = direcciones.get((dx, dy), 'w')
-            nuevo_movimientos[i].append(f"{movimiento_etiqueta} ({nueva[0]},{nueva[1]})")
+            new_movements = [m[:] for m in current_movements]
+            for i, (prev, new) in enumerate(zip(aircrafts, new_positions)):
+                dx, dy = new[0] - prev[0], new[1] - prev[1]
+                movement_label = directions.get((dx, dy), 'w')
+                new_movements[i].append(f"{movement_label} ({new[0]},{new[1]})")
 
-        sucesores.append({
-            'posiciones': nuevas_posiciones,
-            'tiempo': tiempo + 1,
-            'movimientos': nuevo_movimientos
-        })
+            successors.append({
+                'posiciones': new_positions,
+                'tiempo': time + 1,
+                'movimientos': new_movements
+            })
 
-    return sucesores
+        return successors
 
-def a_estrella(mapa, aviones, heuristica):
-    """Implementación del algoritmo A* para el problema."""
-    inicio = {
-        'posiciones': [a['init'] for a in aviones],
-        'tiempo': 0,
-        'movimientos': [[f"({a['init'][0]},{a['init'][1]})"] for a in aviones]
-    }
-    meta = [a['goal'] for a in aviones]
+class AStarAlgorithm:
+    def __init__(self, map_data, aircrafts, heuristic):
+        self.map_data = map_data
+        self.aircrafts = aircrafts
+        self.heuristic = heuristic
 
-    cola = []
-    contador = 0
-    coste_inicial = heuristica(inicio['posiciones'], meta)
-    cola.append((coste_inicial, contador, inicio))
+    def a_star(self):
+        start = {
+            'posiciones': [a['init'] for a in self.aircrafts],
+            'tiempo': 0,
+            'movimientos': [[f"({a['init'][0]},{a['init'][1]})"] for a in self.aircrafts]
+        }
+        goal = [a['goal'] for a in self.aircrafts]
 
-    visitados = set()
-    h_inicial = coste_inicial
-    nodos_expandidos = 0
+        queue = []
+        counter = 0
+        initial_cost = self.heuristic(start['posiciones'], goal)
+        queue.append((initial_cost, counter, start))
 
-    while cola:
-        # Ordenar la cola para simular el comportamiento de un heap
-        cola.sort(key=lambda x: x[0])
-        _, _, estado = cola.pop(0)
-        posiciones = estado['posiciones']
+        visited = set()
+        h_initial = initial_cost
+        expanded_nodes = 0
 
-        # Verificar si es estado objetivo
-        if posiciones == meta:
-            return estado['movimientos'], estado['tiempo'], h_inicial, nodos_expandidos
+        while queue:
+            queue.sort(key=lambda x: x[0])
+            _, _, state = queue.pop(0)
+            positions = state['posiciones']
 
-        clave_estado = (tuple(posiciones), estado['tiempo'])
-        if clave_estado in visitados:
-            continue
-        visitados.add(clave_estado)
-        nodos_expandidos += 1
+            if positions == goal:
+                return state['movimientos'], state['tiempo'], h_initial, expanded_nodes
 
-        # Generar sucesores
-        for sucesor in generar_sucesores(estado, mapa, meta):
-            contador += 1
-            costo = sucesor['tiempo'] + heuristica(sucesor['posiciones'], meta)
-            cola.append((costo, contador, sucesor))
+            state_key = (tuple(positions), state['tiempo'])
+            if state_key in visited:
+                continue
+            visited.add(state_key)
+            expanded_nodes += 1
 
-    return None, None, h_inicial, nodos_expandidos
+            for successor in SuccessorGenerator.generate_successors(state, self.map_data, goal):
+                counter += 1
+                cost = successor['tiempo'] + self.heuristic(successor['posiciones'], goal)
+                queue.append((cost, counter, successor))
+
+        return None, None, h_initial, expanded_nodes
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        print("Uso: python ASTARRodaje.py <path mapa.csv> <num-h>")
+        print("Uso: python ASTARRodaje.py <path mapa01.csv> <num-h>")
         sys.exit(1)
 
-    ruta_csv = sys.argv[1]
-    num_heuristica = int(sys.argv[2])
+    csv_route = sys.argv[1]
+    num_heuristic = int(sys.argv[2])
+    name_map = os.path.basename(csv_route).split('.')[0]
 
-    mapa, aviones = leer_mapa_csv(ruta_csv)
+    map_data, aircraft = MapInputReader.read_map_input(csv_route)
 
-    if num_heuristica == 1:
-        heuristica = heuristica_manhattan
-    elif num_heuristica == 2:
-        heuristica = heuristica_max_manhattan
+    if num_heuristic == 1:
+        heuristic = Heuristics.manhattan_heuristic
+    elif num_heuristic == 2:
+        heuristic = Heuristics.max_manhattan_heuristic
     else:
         print("Heurística no implementada. Use 1 para suma, 2 para máxima.")
         sys.exit(1)
 
-    inicio_tiempo = time.time()
-    solucion, makespan, h_inicial, nodos_expandidos = a_estrella(mapa, aviones, heuristica)
-    fin_tiempo = time.time()
+    a_star_algorithm = AStarAlgorithm(map_data, aircraft, heuristic)
 
-    if solucion:
-        print("Solución encontrada:")
-        for i, movimientos in enumerate(solucion):
-            print(f"Avion {i + 1}: " + ' '.join(movimientos))
-        print(f"Makespan: {makespan}")
-        print(f"h inicial: {h_inicial}")
-        print(f"Nodos expandidos: {nodos_expandidos}")
-        print(f"Tiempo total: {fin_tiempo - inicio_tiempo:.2f} segundos")
+    start_time = time.time()
+    solution, makespan, h_initial, expanded_nodes = a_star_algorithm.a_star()
+    end_time = time.time()
+
+    if solution:
+        output_dir = "./parte-2/ASTAR-tests"
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
+        output_path = f"{output_dir}/{name_map}-{num_heuristic}.output"
+        stat_path = f"{output_dir}/{name_map}-{num_heuristic}.stat"
+
+        with open(output_path, 'w') as f_output:
+            for movements in solution:
+                f_output.write(' '.join(movements) + '\n')
+
+        with open(stat_path, 'w') as f_stat:
+            f_stat.write(f"Tiempo total: {end_time - start_time:.10f}s\n")
+            f_stat.write(f"Makespan: {makespan}\n")
+            f_stat.write(f"h inicial: {h_initial}\n")
+            f_stat.write(f"Nodos expandidos: {expanded_nodes}\n")
+
+        print("Solución y estadísticas guardadas en ./ASTAR-tests/")
     else:
         print("No se encontró solución")
-        print(f"h inicial: {h_inicial}")
-        print(f"Nodos expandidos: {nodos_expandidos}")
-        print(f"Tiempo total: {fin_tiempo - inicio_tiempo:.2f} segundos")
+        print(f"h inicial: {h_initial}")
+        print(f"Nodos expandidos: {expanded_nodes}")
+        print(f"Tiempo total: {end_time - start_time:.10f} segundos")
