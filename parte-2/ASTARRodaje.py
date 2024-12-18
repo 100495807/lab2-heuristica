@@ -1,5 +1,3 @@
-import heapq
-import csv
 import time
 from itertools import product
 import sys
@@ -105,14 +103,16 @@ def a_estrella(mapa, aviones, heuristica):
     cola = []
     contador = 0
     coste_inicial = heuristica(inicio['posiciones'], meta)
-    heapq.heappush(cola, (coste_inicial, contador, inicio))
+    cola.append((coste_inicial, contador, inicio))
 
     visitados = set()
     h_inicial = coste_inicial
     nodos_expandidos = 0
 
     while cola:
-        _, _, estado = heapq.heappop(cola)
+        # Ordenar la cola para simular el comportamiento de un heap
+        cola.sort(key=lambda x: x[0])
+        _, _, estado = cola.pop(0)
         posiciones = estado['posiciones']
 
         # Verificar si es estado objetivo
@@ -129,13 +129,13 @@ def a_estrella(mapa, aviones, heuristica):
         for sucesor in generar_sucesores(estado, mapa, meta):
             contador += 1
             costo = sucesor['tiempo'] + heuristica(sucesor['posiciones'], meta)
-            heapq.heappush(cola, (costo, contador, sucesor))
+            cola.append((costo, contador, sucesor))
 
     return None, None, h_inicial, nodos_expandidos
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        print("Uso: python p2.py <path mapa.csv> <num-h>")
+        print("Uso: python ASTARRodaje.py <path mapa.csv> <num-h>")
         sys.exit(1)
 
     ruta_csv = sys.argv[1]

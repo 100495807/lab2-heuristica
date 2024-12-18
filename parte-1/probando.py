@@ -11,60 +11,68 @@ class MaintenanceScheduler:
         self.output_file_path = input_file_path.replace(".txt", ".csv")
         self.file_manager = FileManager()
 
+    # Cargamos los datos del archivo
     def load_data(self):
         try:
-            print("Loading data...")
+            print("Cargando datos...")
             self.time_slots, self.matrix_size, self.standard_workshops, self.special_workshops, self.parking_spots, self.aircrafts = self.file_manager.load_file_data(
                 self.input_file_path)
         except Exception as e:
-            raise ValueError(f"Error loading data from file: {e}")
+            raise ValueError(f"Error al cargar los datos del archivo: {e}")
 
+    # Configuramos el problema CSP
     def setup_problem(self):
         self.problem = setup_problem(self.time_slots, self.matrix_size, self.standard_workshops, self.special_workshops,
                                      self.parking_spots, self.aircrafts)
 
+    # Resolvemos el problema CSP
     def solve_problem(self):
         start_time = time.time()
         self.solutions = self.problem.getSolutions()
         end_time = time.time()
         self.execution_time = end_time - start_time
 
+    # Guardamos los resultados en un archivo
     def save_results(self):
-        print("Saving results...")
+        print("Guardando resultados...")
         self.file_manager.save_results(self.output_file_path, self.solutions, self.aircrafts, self.time_slots,
                                        self.special_workshops, self.standard_workshops)
 
+    # Ejecutamos el proceso
     def execute(self):
         self.load_data()
         print(
-            f"Time slots: {self.time_slots} \nMatrix size: {self.matrix_size} \nStandard Workshops: {self.standard_workshops} "
-            f"\nSpecial Workshops: {self.special_workshops} \nParking Spots: {self.parking_spots} \nAircrafts: {self.aircrafts}")
+            f"Franjas: {self.time_slots} \nTamaño matriz: {self.matrix_size} \nTalleres estandar (STD): {self.standard_workshops} "
+            f"\nTalleres especiales (SPC): {self.special_workshops} \nParkings (PRK): {self.parking_spots} \nAviones: {self.aircrafts}")
         self.setup_problem()
         self.solve_problem()
-        print(f"Execution Time: {self.execution_time:.2f} seconds \nNumber of solutions found: {len(self.solutions)}")
+        print(f"Tiempo de ejecucion: {self.execution_time:.2f} segundos \nNumero de soluciones encontradas: {len(self.solutions)}")
         self.save_results()
-        print("Process completed.")
+        print("Proces0 completado.")
 
 
 class FileManager:
     def __init__(self):
         pass
 
+    # Extraemos las posiciones de los talleres
     def extract_positions(self, line):
         positions_str = line.split(":")[1].strip()
         positions = [tuple(map(int, re.findall(r'\d+', pos))) for pos in positions_str.split()]
         return positions
 
+    # Extraemos los datos de un avión
     def extract_aircraft(self, line):
         parts = line.strip().split("-")
         return {
             "ID": parts[0],
-            "TYPE": parts[1],
+            "TIPO": parts[1],
             "RESTR": parts[2],
             "T1": int(parts[3]),
             "T2": int(parts[4])
         }
 
+    # Cargamos los datos del archivo
     def load_file_data(self, file_path):
         with open(file_path, "r") as file:
             lines = file.readlines()
@@ -80,19 +88,20 @@ class FileManager:
 
         return num_time_slots, matrix_dimensions, standard_workshops, special_workshops, parking_spots, aircrafts
 
+    # Guardamos los resultados
     def save_results(self, output_file_path, solutions, aircrafts, time_slots, special_workshops, standard_workshops):
         with open(output_file_path, 'w') as file:
-            file.write(f"Num. Solutions: {len(solutions)}\n")
+            file.write(f"N. Sol: {len(solutions)}\n")
             if not solutions:
-                file.write("No valid solutions found.\n")
-                print("No valid solutions found.")
+                file.write("No se encontraron soluciones válidas.\n")
+                print("No se encontro ninguna solucion valida.")
                 return
 
             for i, solution in enumerate(solutions[:50]):
-                file.write(f"Solution {i + 1}:\n")
+                file.write(f"Solucion {i + 1}:\n")
                 for aircraft in aircrafts:
                     file.write(
-                        f"{aircraft['ID']}-{aircraft['TYPE']}-{aircraft['RESTR']}-{aircraft['T1']}-{aircraft['T2']}: ")
+                        f"{aircraft['ID']}-{aircraft['TIPO']}-{aircraft['RESTR']}-{aircraft['T1']}-{aircraft['T2']}: ")
                     for time_slot in range(time_slots):
                         position = solution[f"{aircraft['ID']}-{time_slot}"]
                         if position in special_workshops:
@@ -104,17 +113,33 @@ class FileManager:
                         file.write(f"{workshop_type}{position} ")
                     file.write("\n")
 
-# Setup the CSP problem
+# Configuramos el problema CSP
 def setup_problem(num_time_slots, matrix_size, standard_workshops, special_workshops, parking_spots, aircrafts):
+    # Creamos una instancia del problema
     problem = Problem()
-
+    # Dominio de las posiciones
     domain = standard_workshops + special_workshops + parking_spots
-
+    # Añadimos las variables al problema
     for aircraft in aircrafts:
         for time_slot in range(num_time_slots):
             problem.addVariable(f"{aircraft['ID']}-{time_slot}", domain)
 
-    # Constraint: Max 2 aircraft per workshop
+    # Restricción en la que solo puede haber un JMB por taller
+    def max_1_jumbo_per_workshop(*assignments):
+        jumbo_counts = defaultdict(int)
+        for aircraft, position in zip(aircrafts, assignments):
+            if aircraft["TIPO"] == "JMB":
+                jumbo_counts[position] += 1
+                if jumbo_counts[position] > 1:
+                    return False
+        return True
+
+    # Añadimos la restricción al problema
+    for time_slot in range(num_time_slots):
+        variables_for_time_slot = [f"{aircraft['ID']}-{time_slot}" for aircraft in aircrafts]
+        problem.addConstraint(max_1_jumbo_per_workshop, variables_for_time_slot)
+
+    # Restrcicción en la que no puede haber mas de 2 aviones en un taller
     def max_2_aircrafts_per_workshop(*assignments):
         workshop_counts = defaultdict(int)
         for position in assignments:
@@ -123,22 +148,13 @@ def setup_problem(num_time_slots, matrix_size, standard_workshops, special_works
                 return False
         return True
 
-    # Constraint: Max 1 JMB per workshop
-    def max_1_jumbo_per_workshop(*assignments):
-        jumbo_counts = defaultdict(int)
-        for aircraft, position in zip(aircrafts, assignments):
-            if aircraft["TYPE"] == "JMB":
-                jumbo_counts[position] += 1
-                if jumbo_counts[position] > 1:
-                    return False
-        return True
-
+    # Añadimos la restricción al problema
     for time_slot in range(num_time_slots):
         variables_for_time_slot = [f"{aircraft['ID']}-{time_slot}" for aircraft in aircrafts]
         problem.addConstraint(max_2_aircrafts_per_workshop, variables_for_time_slot)
-        problem.addConstraint(max_1_jumbo_per_workshop, variables_for_time_slot)
 
-    # Constraint: Tasks completed in valid workshops in order if applicable
+
+    # Restricción en la que se deben cumplir las tareas de mantenimiento
     def task_constraints(*assignments):
         for aircraft in aircrafts:
             remaining_tasks = {"T1": aircraft["T1"], "T2": aircraft["T2"]}
@@ -169,10 +185,26 @@ def setup_problem(num_time_slots, matrix_size, standard_workshops, special_works
 
         return True
 
+    # Añadimos la restricción al problema
     problem.addConstraint(task_constraints, [f"{aircraft['ID']}-{time_slot}" for aircraft in aircrafts for time_slot in
                                              range(num_time_slots)])
 
-    # Constraint: Ensure free adjacency
+    # Restricción en la que no puede haber aviones JUMBO adyacentes
+    def no_adjacent_jumbo(*assignments):
+        jumbo_positions = [pos for aircraft, pos in zip(aircrafts, assignments) if aircraft["TIPO"] == "JMB"]
+        for pos in jumbo_positions:
+            x, y = pos
+            neighbors = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
+            if any(adj in jumbo_positions for adj in neighbors if adj in domain):
+                return False
+        return True
+
+    # Añadimos la restricción al problema
+    for time_slot in range(num_time_slots):
+        variables_for_time_slot = [f"{aircraft['ID']}-{time_slot}" for aircraft in aircrafts]
+        problem.addConstraint(no_adjacent_jumbo, variables_for_time_slot)
+
+    # Restricción en la que no puede haber aviones adyacentes
     def no_adjacent_occupancy(*assignments):
         occupied_positions = set(assignments)
         for position in occupied_positions:
@@ -183,23 +215,12 @@ def setup_problem(num_time_slots, matrix_size, standard_workshops, special_works
                     return False
         return True
 
+    # Añadimos la restricción al problema
     for time_slot in range(num_time_slots):
         variables_for_time_slot = [f"{aircraft['ID']}-{time_slot}" for aircraft in aircrafts]
         problem.addConstraint(no_adjacent_occupancy, variables_for_time_slot)
 
-    # Constraint: Avoid adjacent JMB aircrafts
-    def no_adjacent_jumbo(*assignments):
-        jumbo_positions = [pos for aircraft, pos in zip(aircrafts, assignments) if aircraft["TYPE"] == "JMB"]
-        for pos in jumbo_positions:
-            x, y = pos
-            neighbors = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
-            if any(adj in jumbo_positions for adj in neighbors if adj in domain):
-                return False
-        return True
 
-    for time_slot in range(num_time_slots):
-        variables_for_time_slot = [f"{aircraft['ID']}-{time_slot}" for aircraft in aircrafts]
-        problem.addConstraint(no_adjacent_jumbo, variables_for_time_slot)
 
     return problem
 
