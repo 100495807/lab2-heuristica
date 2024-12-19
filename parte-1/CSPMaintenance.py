@@ -120,7 +120,7 @@ def setup_problem(num_time_slots, matrix_size, standard_workshops, special_works
     # Creamos una instancia del problema
     problem = Problem()
     # Dominio de las posiciones
-    domain = standard_workshops + special_workshops + parking_spots
+    domain = parking_spots + standard_workshops + special_workshops
     # Añadimos las variables al problema
     for aircraft in aircrafts:
         for time_slot in range(num_time_slots):
@@ -134,7 +134,7 @@ def setup_problem(num_time_slots, matrix_size, standard_workshops, special_works
             if aircraft["TIPO"] == "JMB":
                 if position not in jumbo_counts:
                     jumbo_counts[position] = 0
-                jumbo_counts[position] += 1
+                jumbo_counts[position] = jumbo_counts[position] + 1
                 if jumbo_counts[position] > 1:
                     return False
         return True
@@ -150,7 +150,7 @@ def setup_problem(num_time_slots, matrix_size, standard_workshops, special_works
         for position in assignments:
             if position not in workshop_counts:
                 workshop_counts[position] = 0
-            workshop_counts[position] += 1
+            workshop_counts[position] = workshop_counts[position] + 1
             if workshop_counts[position] > 2:
                 return False
         return True
@@ -165,29 +165,29 @@ def setup_problem(num_time_slots, matrix_size, standard_workshops, special_works
     def task_constraints(*assignments):
         for aircraft in aircrafts:
             remaining_tasks = {"T1": aircraft["T1"], "T2": aircraft["T2"]}
-            special_workshop_count = 0
             standard_workshop_count = 0
+            special_workshop_count = 0
 
             for time_slot in range(num_time_slots):
                 position = assignments[aircrafts.index(aircraft) * num_time_slots + time_slot]
                 if position in special_workshops:
-                    special_workshop_count += 1
-                    standard_workshop_count += 1
+                    standard_workshop_count = standard_workshop_count + 1
+                    special_workshop_count = special_workshop_count + 1
                     if remaining_tasks["T2"] > 0:
-                        remaining_tasks["T2"] -= 1
-                    elif aircraft["RESTR"] == "T" and remaining_tasks["T2"] == 0 and remaining_tasks["T1"] > 0:
-                        remaining_tasks["T1"] -= 1
+                        remaining_tasks["T2"] = remaining_tasks["T2"] - 1
+                    elif remaining_tasks["T1"] > 0 and aircraft["RESTR"] == "T" and remaining_tasks["T2"] == 0:
+                        remaining_tasks["T1"] = remaining_tasks["T1"] - 1
                 elif position in standard_workshops:
                     standard_workshop_count += 1
-                    if remaining_tasks["T2"] > 0 and aircraft["RESTR"] == "T":
+                    if aircraft["RESTR"] == "T" and remaining_tasks["T2"] > 0:
                         return False
                     if remaining_tasks["T1"] > 0:
-                        remaining_tasks["T1"] -= 1
+                        remaining_tasks["T1"] = remaining_tasks["T1"] - 1
 
-            if special_workshop_count < aircraft["T2"]:
+            if aircraft["T2"] > special_workshop_count:
                 return False
 
-            if standard_workshop_count < aircraft["T1"] + aircraft["T2"]:
+            if aircraft["T1"] + aircraft["T2"] > standard_workshop_count:
                 return False
 
         return True
@@ -204,7 +204,7 @@ def setup_problem(num_time_slots, matrix_size, standard_workshops, special_works
             x, y = pos
             neighbors = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
             for adj in neighbors:
-                if adj in jumbo_positions and adj in domain:
+                if adj in domain and adj in jumbo_positions:
                     return False
         return True
 
@@ -217,7 +217,7 @@ def setup_problem(num_time_slots, matrix_size, standard_workshops, special_works
     def no_adjacent_occupancy(*assignments):
         occupied_positions = set(assignments)
         for position in occupied_positions:
-            if position in parking_spots + standard_workshops + special_workshops:
+            if position in standard_workshops + special_workshops + parking_spots:
                 x, y = position
                 neighbors = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
                 if all(adj in occupied_positions for adj in neighbors if adj in domain):

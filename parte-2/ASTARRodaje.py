@@ -1,25 +1,7 @@
+import os
+import sys
 import time
 from itertools import product
-import sys
-import os
-
-class MapInputReader:
-    @staticmethod
-    def read_map_input(ruta):
-        with open(ruta, 'r') as file:
-            lines = file.read().strip().split('\n')
-
-        n_aircrafts = int(lines[0])
-        aircrafts = []
-        for i in range(1, n_aircrafts + 1):
-            init, goal = lines[i].split()
-            aircrafts.append({
-                'init': tuple(map(int, init.strip('()').split(','))),
-                'goal': tuple(map(int, goal.strip('()').split(',')))
-            })
-
-        map_data = [linea.split(';') for linea in lines[n_aircrafts + 1:]]
-        return map_data, aircrafts
 
 class Heuristics:
     @staticmethod
@@ -91,10 +73,11 @@ class SuccessorGenerator:
         return successors
 
 class AStarAlgorithm:
-    def __init__(self, map_data, aircrafts, heuristic):
+    def __init__(self, map_data, aircrafts, heuristic, max_expanded_nodes=100000):
         self.map_data = map_data
         self.aircrafts = aircrafts
         self.heuristic = heuristic
+        self.max_expanded_nodes = max_expanded_nodes
 
     def a_star(self):
         start = {
@@ -127,6 +110,10 @@ class AStarAlgorithm:
             visited.add(state_key)
             expanded_nodes += 1
 
+            if expanded_nodes > self.max_expanded_nodes:
+                print("Se ha alcanzado el número máximo de nodos expandidos.")
+                break
+
             for successor in SuccessorGenerator.generate_successors(state, self.map_data, goal):
                 counter += 1
                 cost = successor['tiempo'] + self.heuristic(successor['posiciones'], goal)
@@ -134,52 +121,115 @@ class AStarAlgorithm:
 
         return None, None, h_initial, expanded_nodes
 
-if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Uso: python ASTARRodaje.py <path mapa01.csv> <num-h>")
-        sys.exit(1)
+class AStarRunner:
+    def __init__(self, csv_route, num_heuristic):
+        self.csv_route = csv_route
+        self.num_heuristic = num_heuristic
+        self.name_map = os.path.basename(csv_route).split('.')[0]
+        self.map_data, self.aircraft = self.read_input()
+        self.heuristic = self.select_heuristic()
+        self.a_star_algorithm = AStarAlgorithm(self.map_data, self.aircraft, self.heuristic)
 
-    csv_route = sys.argv[1]
-    num_heuristic = int(sys.argv[2])
-    name_map = os.path.basename(csv_route).split('.')[0]
+    def read_input(self):
+        with open(self.csv_route, 'r') as file:
+            lines = file.read().strip().split('\n')
 
-    map_data, aircraft = MapInputReader.read_map_input(csv_route)
+        n_aircrafts = int(lines[0])
+        aircrafts = []
+        initial_positions = set()
+        map_data = [linea.split(';') for linea in lines[n_aircrafts + 1:]]
 
-    if num_heuristic == 1:
-        heuristic = Heuristics.manhattan_heuristic
-    elif num_heuristic == 2:
-        heuristic = Heuristics.max_manhattan_heuristic
-    else:
-        print("Heurística no implementada. Use 1 para suma, 2 para máxima.")
-        sys.exit(1)
+        for i in range(1, n_aircrafts + 1):
+            init, goal = lines[i].split()
+            init_pos = tuple(map(int, init.strip('()').split(',')))
+            goal_pos = tuple(map(int, goal.strip('()').split(',')))
 
-    a_star_algorithm = AStarAlgorithm(map_data, aircraft, heuristic)
+            if init_pos in initial_positions:
+                raise ValueError(f"Dos aviones no pueden comenzar en la misma casilla: {init_pos}")
+            if map_data[init_pos[0]][init_pos[1]] == 'G' or map_data[goal_pos[0]][goal_pos[1]] == 'G':
+                raise ValueError(f"Un avión no puede tener una casilla gris como inicial o final: {init_pos} o {goal_pos}")
 
-    start_time = time.time()
-    solution, makespan, h_initial, expanded_nodes = a_star_algorithm.a_star()
-    end_time = time.time()
+            initial_positions.add(init_pos)
+            aircrafts.append({
+                'init': init_pos,
+                'goal': goal_pos
+            })
 
-    if solution:
+        return map_data, aircrafts
+
+    def select_heuristic(self):
+        if self.num_heuristic == 1:
+            return Heuristics.manhattan_heuristic
+        elif self.num_heuristic == 2:
+            return Heuristics.max_manhattan_heuristic
+        else:
+            print("Heurística no implementada."
+                  "Use 1 (heuristica de manhattan) o 2 (heuristica maxima de manhattan).")
+            sys.exit(1)
+
+    def handle_error(self, error):
+        print(error)
         output_dir = "./parte-2/ASTAR-tests"
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
-        output_path = f"{output_dir}/{name_map}-{num_heuristic}.output"
-        stat_path = f"{output_dir}/{name_map}-{num_heuristic}.stat"
+        output_path = f"{output_dir}/{self.name_map}-{self.num_heuristic}.output"
+        stat_path = f"{output_dir}/{self.name_map}-{self.num_heuristic}.stat"
 
         with open(output_path, 'w') as f_output:
-            for movements in solution:
-                f_output.write(' '.join(movements) + '\n')
+            f_output.write(str(error) + '\n')
 
         with open(stat_path, 'w') as f_stat:
-            f_stat.write(f"Tiempo total: {end_time - start_time:.10f}s\n")
-            f_stat.write(f"Makespan: {makespan}\n")
-            f_stat.write(f"h inicial: {h_initial}\n")
-            f_stat.write(f"Nodos expandidos: {expanded_nodes}\n")
+            f_stat.write(f"Error: {error}\nNo se encontró solución\n")
 
-        print("Solución y estadísticas guardadas en ./ASTAR-tests/")
-    else:
-        print("No se encontró solución")
-        print(f"h inicial: {h_initial}")
-        print(f"Nodos expandidos: {expanded_nodes}")
-        print(f"Tiempo total: {end_time - start_time:.10f} segundos")
+        sys.exit(1)
+
+    def run(self):
+        start_time = time.time()
+        solution, makespan, h_initial, expanded_nodes = self.a_star_algorithm.a_star()
+        end_time = time.time()
+
+        output_dir = "./parte-2/ASTAR-tests"
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
+        output_path = f"{output_dir}/{self.name_map}-{self.num_heuristic}.output"
+        stat_path = f"{output_dir}/{self.name_map}-{self.num_heuristic}.stat"
+
+        if solution:
+            with open(output_path, 'w') as f_output:
+                for movements in solution:
+                    f_output.write(' '.join(movements) + '\n')
+
+            with open(stat_path, 'w') as f_stat:
+                f_stat.write(f"Tiempo total: {end_time - start_time:.10f}s\n"
+                             f"Makespan: {makespan}\n"
+                             f"h inicial: {h_initial}\n"
+                             f"Nodos expandidos: {expanded_nodes}\n")
+
+            print("Solución y estadísticas guardadas en ./ASTAR-tests/")
+        else:
+            with open(output_path, 'w') as f_output:
+                f_output.write("No se encontró solución\n")
+
+            with open(stat_path, 'w') as f_stat:
+                f_stat.write(f"Tiempo total: {end_time - start_time:.10f}s\n"
+                             f"No se encontró solución\n"
+                             f"h inicial: {h_initial}\n"
+                             f"Nodos expandidos: {expanded_nodes}\n")
+
+            print(f"No se encontró solución\n"
+                  f"h inicial: {h_initial}\n"
+                  f"Nodos expandidos: {expanded_nodes}\n"
+                  f"Tiempo total: {end_time - start_time:.10f} segundos")
+
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print("Uso: python ASTARRodaje.py <path mapa00.csv> <num-h>")
+        sys.exit(1)
+
+    csv_route = sys.argv[1]
+    num_heuristic = int(sys.argv[2])
+
+    runner = AStarRunner(csv_route, num_heuristic)
+    runner.run()
