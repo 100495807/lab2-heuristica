@@ -66,6 +66,27 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\parte-2\ASTAR-tests\mapa04.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\parte-2\ASTAR-tests\mapa05.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\parte-2\ASTAR-tests\mapa06.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
       </map>
     </option>
   </component>

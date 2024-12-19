@@ -6,16 +6,25 @@ from itertools import product
 class Heuristics:
     @staticmethod
     def manhattan_heuristic(positions, goals):
+        '''
+        Calcula la distancia de manhattan entre las posiciones y las metas de los aviones.
+        '''
         return sum(abs(x - gx) + abs(y - gy) for (x, y), (gx, gy) in zip(positions, goals))
 
     @staticmethod
     def max_manhattan_heuristic(positions, goals):
+        '''
+        Calcula la distancia de manhattan máxima entre las posiciones y las metas de los aviones.
+        '''
         distances = [abs(x - gx) + abs(y - gy) for (x, y), (gx, gy) in zip(positions, goals)]
         return max(distances)
 
 class MovementValidator:
     @staticmethod
     def obtain_valid_movements(pos, map_data):
+        '''
+        Se obtienen los movimientos válidos para un avión en una posición dada.
+        '''
         movements = [(0, 1), (0, -1), (1, 0), (-1, 0)]
         x, y = pos
         valid = [(x + dx, y + dy) for dx, dy in movements
@@ -27,6 +36,9 @@ class MovementValidator:
 class SuccessorGenerator:
     @staticmethod
     def generate_successors(state, map_data, goals):
+        '''
+        Se generan los sucesores de un estado dado.
+        '''
         successors = []
         aircrafts = state['posiciones']
         time = state['tiempo']
@@ -80,6 +92,9 @@ class AStarAlgorithm:
         self.max_expanded_nodes = max_expanded_nodes
 
     def a_star(self):
+        '''
+        Algoritmo A* para encontrar la solución al problema de los aviones.
+        '''
         start = {
             'posiciones': [a['init'] for a in self.aircrafts],
             'tiempo': 0,
@@ -131,6 +146,9 @@ class AStarRunner:
         self.a_star_algorithm = AStarAlgorithm(self.map_data, self.aircraft, self.heuristic)
 
     def read_input(self):
+        '''
+        Metodo para leer el archivo de entrada.
+        '''
         with open(self.csv_route, 'r') as file:
             lines = file.read().strip().split('\n')
 
@@ -158,6 +176,9 @@ class AStarRunner:
         return map_data, aircrafts
 
     def select_heuristic(self):
+        '''
+        Metodo para seleccionar la heurística a utilizar.
+        '''
         if self.num_heuristic == 1:
             return Heuristics.manhattan_heuristic
         elif self.num_heuristic == 2:
@@ -168,6 +189,9 @@ class AStarRunner:
             sys.exit(1)
 
     def handle_error(self, error):
+        '''
+        Metodo que maneja los errores y guarda los resultados en un archivo de salida.
+        '''
         print(error)
         output_dir = "./parte-2/ASTAR-tests"
         if not os.path.exists(output_dir):
@@ -185,6 +209,9 @@ class AStarRunner:
         sys.exit(1)
 
     def run(self):
+        '''
+        Metodo para ejecutar el programa.
+        '''
         start_time = time.time()
         solution, makespan, h_initial, expanded_nodes = self.a_star_algorithm.a_star()
         end_time = time.time()

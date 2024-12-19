@@ -1,8 +1,8 @@
-Franjas: 3
-3x2
+Franjas: 2
+3x3
 STD:(0,1) (1,0)
 SPC:(2,1)
 PRK:(0,0) (1,1) (2,0)
-1-JMB-T-1-2
-2-STD-F-2-1
+1-JMB-T-1-1
+2-STD-F-1-1
 3-STD-T-0-1
